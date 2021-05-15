@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView ,View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Dimensions } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 
 const windowWidth = Dimensions.get('window').width;
+
+import realm from '../components/realm';
 
 const CategoryCard = (cardInfo, index, navigation) => {
     return (
@@ -26,8 +28,8 @@ function HomeScreen({ navigation }) {
         {
             color: '#78E3D5',
             title: 'All Tasks',
-            totalTasks: 20,
-            totalCompleted: 10,
+            totalTasks: 32,
+            totalCompleted: 21,
             iconName: 'list'
         },
         {
@@ -59,6 +61,10 @@ function HomeScreen({ navigation }) {
             iconName: 'shopping-bag'
         },
     ]
+
+    useEffect(() => {
+
+    }, [])
 
     return (
         <View>
