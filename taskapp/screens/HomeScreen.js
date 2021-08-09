@@ -23,62 +23,99 @@ const CategoryCard = (cardInfo, index, navigation) => {
 }
 
 function HomeScreen({ navigation }) {
+    const categories = realm.objects('Category');
+    const tasks = realm.objects('Task');
 
-    const categories = [
+    const [categoryList, setCategoryList] = useState([])
+
+    const cat = [
         {
             color: '#78E3D5',
             title: 'All Tasks',
-            totalTasks: 32,
-            totalCompleted: 21,
+            totalTasks: 0,
+            totalCompleted: 0,
             iconName: 'list'
         },
         {
             color: '#789CE3',
             title: 'Home',
-            totalTasks: 6,
-            totalCompleted: 2,
+            totalTasks: 0,
+            totalCompleted: 0,
             iconName: 'home'
         },
         {
             color: '#E6CE6A',
             title: 'Studies',
-            totalTasks: 12,
-            totalCompleted: 8,
+            totalTasks: 0,
+            totalCompleted: 0,
             iconName: 'book'
         },
         {
             color: '#DE87EB',
             title: 'Work',
-            totalTasks: 9,
-            totalCompleted: 7,
+            totalTasks: 0,
+            totalCompleted: 0,
             iconName: 'briefcase'
         },
         {
             color: '#B1EB77',
             title: 'Shoping',
-            totalTasks: 5,
-            totalCompleted: 4,
+            totalTasks: 0,
+            totalCompleted: 0,
             iconName: 'shopping-bag'
         },
     ]
 
     useEffect(() => {
 
+        if(categories.length < 1){
+            realm.write(() => {
+                cat.forEach(category => {
+                    realm.create('Category', category);
+                })
+            })
+        }
+
+        realm.write(() => {
+            categories.forEach(category => {
+                if(category.title === "All Tasks"){
+                    category.totalTasks = tasks.length;
+                    category.totalCompleted = tasks.filtered("done == true").length;
+                }else{
+                    let catTask = tasks.filtered("category == '" + category.title + "'");
+                    category.totalTasks = catTask.length;
+                    category.totalCompleted = catTask.filtered("done == true").length;
+                }
+            })
+        })
+
+        setCategoryList([...categories]);
+        categories.addListener(() => {
+            setCategoryList([...categories]);
+        })
+
+        // realm.write(()=> {
+
+        //     realm.deleteAll();
+        // })
+        return ()=>{
+            categories.removeAllListeners()
+        }
     }, [])
 
     return (
-        <View>
-            <ScrollView contentContainerStyle={styles.screenContainer}>
-                <View style={styles.headerContainer}>
+        <View style={styles.screenContainer}>
+            <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+                {/* <View style={styles.headerContainer}>
                     <View style={styles.profileIcon}></View>
-                </View>
+                </View> */}
                 <View style={styles.welcomeContainer}>
                     <Text style={styles.welcomeText}>Welcome</Text>
-                    <Text style={styles.usernameText}>John Doe</Text>
+                    <Text style={styles.usernameText}>Akshay</Text>
                 </View>
                 <View style={styles.categoriesContainer}>
                     {
-                        categories.map((categoryInfo, index) => CategoryCard(categoryInfo, index, navigation))
+                        categoryList.map((categoryInfo, index) => CategoryCard(categoryInfo, index, navigation))
                     }
                 </View>
             </ScrollView>
@@ -93,9 +130,12 @@ function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
     screenContainer : {
+        backgroundColor: '#FCFCFD',
+        flex: 1,
+    },
+    scrollViewContainer : {
         paddingVertical: 24,
         paddingHorizontal: 8,
-        backgroundColor: '#FCFCFD'
     },
     headerContainer : {
         height: 52,

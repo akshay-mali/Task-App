@@ -12,4 +12,17 @@ Category.schema = {
     },
 };
 
-export default new Realm({schema: [Category]});
+class Task extends Realm.Object {}
+Task.schema = {
+    name: 'Task',
+    properties: {
+        _id: 'string',
+        title: 'string',
+        note: 'string',
+        date: 'date',
+        category: 'string',
+        done: {type:'bool', default:false}
+    },
+};
+
+export default new Realm({schema: [Category, Task]});

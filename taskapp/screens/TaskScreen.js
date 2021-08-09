@@ -1,48 +1,139 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import { Text, View, StyleSheet, SectionList, TouchableOpacity } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
+
+import realm from '../components/realm';
 
 function TaskScreen({ route, navigation }) {
-
     const { color, title, totalTasks, totalCompleted, iconName } = route.params;
+
+    const tasks = realm.objects('Task');
+    const categoryTasks = title==="All Tasks" ? tasks : tasks.filtered("category == '" + title + "'");
+
+    const [categoryTasksList, setCategoryTasksList] = useState([]);
+
+    useEffect(() => {
+        setCategoryTasksList([...categoryTasks]);
+        categoryTasks.addListener(() => {
+            setCategoryTasksList([...categoryTasks]);
+        })
+
+        return () => {
+            categoryTasks.removeAllListeners();
+        }
+    }, [])
+
+    const today = new Date();
+    today.setHours(0,0,0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayAfterTom = new Date(today);
+    dayAfterTom.setDate(dayAfterTom.getDate() + 2);
+    const withinWeek = new Date(today);
+    withinWeek.setDate(withinWeek.getDate() + 7);
 
     const DATA = [
         {
             title: 'Late',
-            data: [{ title: 'Call max', date: 'April 29', time: '20:15' }],
+            data: [],
         },
         {
             title: 'Today',
-            data: [
-            { title: 'Get Up', date: 'Feb 23', time: '6:15' },
-            { title: 'Do UI practice', date: 'Feb 23', time: '11:00' },
-            { title: 'Learn React Native', date: 'Feb 23', time: '15:30' },
-            ],
+            data: [],
         },
         {
             title: 'Tomorrow',
-            data: [
-            { title: 'Attend IVP class', date: 'Feb  24', time: '10:00' },
-            { title: 'Study LP', date: 'Feb 24', time: '16:10' },
-            ],
+            data: [],
         },
         {
-            title: 'This Week',
-            data: [
-            { title: 'Complete CN Assignment', date: 'Feb 27', time: '19:15' },
-            ],
+            title: 'Within a week',
+            data: [],
+        },
+        {
+            title: 'Latter',
+            data: [],
         },
     ];
 
-    const ListItem = ({ item }) => (
-        <View style={styles.listItem}>
-          <View>
-            <Text style={styles.taskTitle}>{item.title}</Text>
-            <Text style={styles.taskDue}>{item.time + ' - ' + item.date}</Text>
-          </View>
-          <View style={styles.checkboxNotSelected}></View>
-        </View>
-    );
+    categoryTasksList.forEach(task => {
+        if(task.date < today){
+            DATA[0].data.push(task);
+        }else if(task.date < tomorrow){
+            DATA[1].data.push(task)
+        }else if(task.date < dayAfterTom){
+            DATA[2].data.push(task);
+        }else if(task.date < withinWeek){
+            DATA[3].data.push(task);
+        }else{
+            DATA[4].data.push(task);
+        }
+    })
+
+    const categories = realm.objects('Category');
+    const handleCheckbox =  (id) => {
+        const currentTask = tasks.filtered('_id = "' + id + '"')[0];
+        realm.write(()=> {
+            if(currentTask.done){
+                if(title !== 'All Tasks'){
+                    categories.filtered('title == "' + title + '"')[0].totalCompleted -= 1;
+                }
+                categories.filtered('title == "All Tasks"')[0].totalCompleted -= 1;
+            }else{
+                if(title !== 'All Tasks'){
+                    categories.filtered('title == "' + title + '"')[0].totalCompleted += 1;
+                }
+                categories.filtered('title == "All Tasks"')[0].totalCompleted += 1;
+            }
+            currentTask.done = !currentTask.done;
+        })
+    }
+
+    const ListItem = ({ item }) => {
+
+        const handleDelete = () => {
+            const currentTask = tasks.filtered('_id = "' + item._id + '"')[0];
+            realm.write(()=> {
+                if(currentTask.done){
+                    if(title !== 'All Tasks'){
+                        categories.filtered('title == "' + title + '"')[0].totalCompleted -= 1;
+                    }
+                    categories.filtered('title == "All Tasks"')[0].totalCompleted -= 1;
+                }
+                if(title !== 'All Tasks'){
+                    categories.filtered('title == "' + title + '"')[0].totalTasks -= 1;
+                }
+                categories.filtered('title == "All Tasks"')[0].totalTasks -= 1;
+                realm.delete(currentTask);
+            })
+        };
+
+        const reghtSwipe = () => {
+            return (
+            <TouchableOpacity onPress={handleDelete} activeOpacity={0.6}>
+                <View style={styles.deleteBox}>
+                <Text style={{color:'#fff'}}>
+                    Delete
+                </Text>
+                </View>
+            </TouchableOpacity>
+            );
+        };
+
+        return (
+            <Swipeable renderRightActions={reghtSwipe}>
+                <View style={styles.listItem}>
+                <View>
+                    <Text style={styles.taskTitle}>{item.title}</Text>
+                    <Text style={styles.taskDue}>{item.date.toISOString()}</Text>
+                </View>
+                <TouchableOpacity onPress={() => {handleCheckbox(item._id)}}>
+                    <View style={item.done ? {...styles.checkboxSelected, backgroundColor: color} : styles.checkboxNotSelected}></View>
+                </TouchableOpacity>
+                </View>
+            </Swipeable>
+        )
+    };
     
     const SectionHeader = ({ title }) => (
         <Text style={styles.sectionHeader}>{title}</Text>
@@ -82,7 +173,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     listItem: {
-        paddingVertical: 4,
+        paddingTop: 4,
+        paddingBottom: 8,
         flexDirection : 'row',
         alignItems : 'center',
         justifyContent : 'space-between'
@@ -92,7 +184,7 @@ const styles = StyleSheet.create({
         color: '#C2C2C2',
         marginBottom: 8,
         marginTop: 16,
-        fontWeight: '500',
+        fontWeight: '600',
     },
     taskTitle: {
         fontSize: 16,
@@ -107,7 +199,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
         paddingHorizontal: 24,
-        paddingTop: 12,
+        paddingTop: 16,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
     },
@@ -148,12 +240,19 @@ const styles = StyleSheet.create({
     checkboxSelected: {
         height: 20,
         width: 20,
-        backgroundColor: '#5886FE',
+        backgroundColor: '#333',
         borderWidth: 0,
         borderRadius: 4
     },
     gobackBtn: {
         marginBottom: 24,
+    },
+    deleteBox: {
+        backgroundColor: '#fa3456',
+        width: 64,
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center'
     }
 })
 
